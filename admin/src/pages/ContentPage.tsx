@@ -939,7 +939,7 @@ function ReelsTab({
     }
   }
 
-  const selectHandle = (h: string) => {
+  const selectHandle = (h: (typeof HANDLES)[number]) => {
     setForm({ ...form, instagram_handle: h, product_id: '' })
     setBrandSlug('')
   }
