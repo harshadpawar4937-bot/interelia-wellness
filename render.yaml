@@ -74,11 +74,10 @@ services:
         - "**/*.md"
         - .github/**
     envVars:
-      - key: API_HOSTPORT
-        fromService:
-          name: interelia-api
-          type: web
-          property: hostport
+      # Free tier has no private DNS between services — use public API URL.
+      # On paid plans you can switch to fromService hostport instead.
+      - key: API_UPSTREAM
+        value: https://interelia-api.onrender.com
 
   # ─── Admin panel ───────────────────────────────────────────────
   - type: web
@@ -101,11 +100,8 @@ services:
         - "**/*.md"
         - .github/**
     envVars:
-      - key: API_HOSTPORT
-        fromService:
-          name: interelia-api
-          type: web
-          property: hostport
+      - key: API_UPSTREAM
+        value: https://interelia-api.onrender.com
 
 databases:
   - name: interelia-db

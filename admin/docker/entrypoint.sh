@@ -3,11 +3,14 @@ set -e
 
 export PORT="${PORT:-80}"
 
-# Render private networking: API_HOSTPORT wins over image default API_UPSTREAM.
-if [ -n "${API_HOSTPORT}" ]; then
-  export API_UPSTREAM="http://${API_HOSTPORT}"
+# Prefer explicit API_UPSTREAM (public HTTPS on free tier). Else API_HOSTPORT.
+if [ -z "${API_UPSTREAM}" ] || [ "${API_UPSTREAM}" = "http://api:8000" ]; then
+  if [ -n "${API_HOSTPORT}" ]; then
+    export API_UPSTREAM="http://${API_HOSTPORT}"
+  else
+    export API_UPSTREAM="http://api:8000"
+  fi
 fi
-export API_UPSTREAM="${API_UPSTREAM:-http://api:8000}"
 
 envsubst '${PORT} ${API_UPSTREAM}' \
   < /etc/nginx/templates/default.conf.template \

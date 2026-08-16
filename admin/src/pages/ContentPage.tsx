@@ -849,13 +849,21 @@ function ReelsTab({
     queryKey: ['admin-reels'],
     queryFn: () => api<Reel[]>('/api/v1/admin/content/reels', { token }),
   })
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    instagram_handle: (typeof HANDLES)[number]
+    permalink: string
+    display_mode: 'local_video' | 'instagram_embed'
+    thumbnail_url: string
+    video_url: string
+    product_id: string | number
+    is_published: boolean
+  }>({
     instagram_handle: HANDLES[0],
     permalink: '',
-    display_mode: 'instagram_embed' as 'local_video' | 'instagram_embed',
+    display_mode: 'instagram_embed',
     thumbnail_url: '',
     video_url: '',
-    product_id: '' as string | number,
+    product_id: '',
     is_published: true,
   })
   const [brandSlug, setBrandSlug] = useState('')
