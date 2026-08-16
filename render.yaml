@@ -1,0 +1,82 @@
+# Interelia Wellness — Render Blueprint
+# Deploy: Dashboard → + New → Blueprint → connect this GitHub repo
+# Docs: https://render.com/docs/infrastructure-as-code
+# Guide: docs/render-deploy.md
+
+services:
+  # ─── FastAPI backend ───────────────────────────────────────────
+  - type: web
+    name: interelia-api
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: interelia-db
+          property: connectionString
+      - key: AUTO_SEED_ON_EMPTY
+        value: "true"
+      - key: ENABLE_API_DOCS
+        value: "false"
+      - key: UPLOAD_DIR
+        value: /app/uploads
+      - key: CORS_ORIGINS
+        # Update after first deploy if you call the API from browsers directly.
+        # Same-origin /api proxy from storefront+admin usually does not need CORS.
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: OPENAI_CHAT_MODEL
+        value: llama-3.1-8b-instant
+
+  # ─── Customer storefront ───────────────────────────────────────
+  - type: web
+    name: interelia-store
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: frontend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: API_HOSTPORT
+        fromService:
+          name: interelia-api
+          type: web
+          property: hostport
+
+  # ─── Admin panel ───────────────────────────────────────────────
+  - type: web
+    name: interelia-admin
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: admin
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: API_HOSTPORT
+        fromService:
+          name: interelia-api
+          type: web
+          property: hostport
+
+databases:
+  - name: interelia-db
+    plan: free
+    databaseName: interelia
+    user: interelia
+    region: oregon

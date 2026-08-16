@@ -1,0 +1,14 @@
+.env
+.env.local
+*.db
+.venv/
+__pycache__/
+node_modules/
+dist/
+backend/data/*.jsonl
+backend/uploads/
+uploads/
+.DS_Store
+test-results/
+playwright-report/
+backend/test_*.db

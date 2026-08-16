@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+/* Interelia Brand Design Tokens — matched to interelia.com */
+@theme {
+  --color-brand: #e52b40;
+  --color-brand-dark: #c41f32;
+  --color-brand-light: #ff4d5e;
+  --color-brand-soft: #fef0f2;
+  --color-ink: #222222;
+  --color-ink-muted: #666666;
+  --color-ink-faint: #999999;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f5f5f5;
+  --color-surface-elevated: #fafafa;
+  --color-border: #eeeeee;
+  --color-border-strong: #e0e0e0;
+  --color-success: #1a7f4b;
+  --color-warning: #c47a00;
+  --color-info: #1a5f9e;
+  --font-display: "Outfit", sans-serif;
+  --font-body: "Plus Jakarta Sans", sans-serif;
+  --shadow-soft: 0 4px 24px rgba(34, 34, 34, 0.06);
+  --shadow-lift: 0 12px 40px rgba(34, 34, 34, 0.1);
+  --radius-brand: 0.5rem;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-surface text-ink font-body text-base leading-relaxed;
+    margin: 0;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display font-semibold tracking-tight text-ink;
+  }
+
+  ::selection {
+    background: rgba(229, 43, 64, 0.15);
+    color: #222;
+  }
+
+  :focus-visible {
+    outline: 2px solid #e52b40;
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .container-brand {
+    @apply mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-8;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .skeleton {
+    @apply animate-pulse rounded bg-surface-secondary;
+  }
+
+  .gradient-hero {
+    background:
+      radial-gradient(ellipse 80% 60% at 70% 20%, rgba(229, 43, 64, 0.08), transparent),
+      radial-gradient(ellipse 50% 40% at 10% 80%, rgba(229, 43, 64, 0.05), transparent),
+      linear-gradient(180deg, #fff 0%, #fafafa 100%);
+  }
+
+  .gradient-trust {
+    background: linear-gradient(135deg, #fef0f2 0%, #fff 50%, #f5f5f5 100%);
+  }
+}
