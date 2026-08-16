@@ -114,7 +114,10 @@ async function fetchProductPicker(
   if (opts?.brandId != null) qs.set('brand_id', String(opts.brandId))
   else if (opts?.brandSlug) qs.set('brand_slug', opts.brandSlug)
   if (opts?.q?.trim()) qs.set('q', opts.q.trim())
-  const res = await api<ProductListResponse>(`/api/v1/admin/products?${qs}`, { token })
+  // Prefer store token when present; omit when null so api() can use authHandlers after hydrate.
+  const res = await api<ProductListResponse>(`/api/v1/admin/products?${qs}`, {
+    ...(token ? { token } : {}),
+  })
   return {
     items: Array.isArray(res?.items) ? res.items : [],
     total: typeof res?.total === 'number' ? res.total : 0,
@@ -194,27 +197,27 @@ function ProductSelect({
 }) {
   const [query, setQuery] = useState('')
   const debouncedQ = useDebouncedValue(query, 300)
+  const selectedId = value === '' || value == null ? '' : String(value)
 
-  const { data, isFetching } = useQuery({
-    queryKey: ['admin-products-pick', brandSlug || 'all', debouncedQ || ''],
+  const { data, isFetching, isError, error, refetch } = useQuery({
+    queryKey: ['admin-products-pick', brandSlug || 'all', debouncedQ || '', Boolean(token)],
     queryFn: () =>
       fetchProductPicker(token, {
         brandSlug: brandSlug || undefined,
         q: debouncedQ || undefined,
       }),
+    enabled: true,
+    retry: 2,
+    staleTime: 30_000,
   })
 
   const options = useMemo(() => {
     const list = [...(data?.items || [])]
-    if (keepOption && !list.some((p) => p.id === keepOption.id)) {
+    if (keepOption && !list.some((p) => String(p.id) === String(keepOption.id))) {
       list.unshift(keepOption)
     }
-    const selectedId = value === '' || value == null ? null : Number(value)
-    if (selectedId && !list.some((p) => p.id === selectedId)) {
-      // selected may be outside current page — keep via keepOption only
-    }
     return list
-  }, [data?.items, keepOption, value])
+  }, [data?.items, keepOption])
 
   const total = data?.total ?? 0
 
@@ -232,27 +235,34 @@ function ProductSelect({
       )}
       <select
         className={className}
-        value={value === null || value === undefined ? '' : value}
+        value={selectedId}
         onChange={(e) => onChange(e.target.value)}
       >
         <option value="">{emptyLabel}</option>
         {options.map((p) => (
-          <option key={p.id} value={p.id}>
+          <option key={p.id} value={String(p.id)}>
             {p.brand ? `${p.brand} — ${p.name}` : p.name}
           </option>
         ))}
       </select>
       <p className="text-xs text-ink-muted">
-        {isFetching
-          ? 'Searching catalog…'
-          : query.trim()
-            ? total === 0
-              ? 'No products match — try another search'
-              : `Showing ${options.length} of ${total.toLocaleString('en-IN')} matches from database`
-            : total > 0
-              ? `Showing latest ${options.length} of ${total.toLocaleString('en-IN')} products — type to search all`
-              : 'No products found'}
+        {isError
+          ? `Could not load products: ${error instanceof Error ? error.message : 'Request failed'}`
+          : isFetching
+            ? 'Searching catalog…'
+            : query.trim()
+              ? total === 0
+                ? 'No products match — try another search or choose All products'
+                : `Showing ${options.length} of ${total.toLocaleString('en-IN')} matches from database`
+              : total > 0
+                ? `Showing latest ${options.length} of ${total.toLocaleString('en-IN')} products — type to search all`
+                : 'No products found — open Products page or retry'}
       </p>
+      {isError && (
+        <button type="button" className="text-xs text-brand underline" onClick={() => void refetch()}>
+          Retry loading products
+        </button>
+      )}
     </div>
   )
 }
@@ -683,20 +693,22 @@ function RailsTab({
   const [railSearch, setRailSearch] = useState('')
   const debouncedRailQ = useDebouncedValue(railSearch, 300)
   const { data: rails = [] } = useQuery({
-    queryKey: ['admin-rails'],
-    queryFn: () => api<Rail[]>('/api/v1/admin/content/rails', { token }),
+    queryKey: ['admin-rails', Boolean(token)],
+    queryFn: () => api<Rail[]>('/api/v1/admin/content/rails', token ? { token } : {}),
   })
   const { data: brands = [] } = useQuery({
-    queryKey: ['admin-brands-curated'],
-    queryFn: () => api<BrandItem[]>('/api/v1/admin/brands?curated=true', { token }),
+    queryKey: ['admin-brands-curated', Boolean(token)],
+    queryFn: () => api<BrandItem[]>('/api/v1/admin/brands?curated=true', token ? { token } : {}),
   })
-  const { data: picker } = useQuery({
-    queryKey: ['admin-products-pick', 'rails', brandSlug || 'all', debouncedRailQ || ''],
+  const { data: picker, isError: pickerError, refetch: refetchPicker } = useQuery({
+    queryKey: ['admin-products-pick', 'rails', brandSlug || 'all', debouncedRailQ || '', Boolean(token)],
     queryFn: () =>
       fetchProductPicker(token, {
         brandSlug: brandSlug || undefined,
         q: debouncedRailQ || undefined,
       }),
+    retry: 2,
+    staleTime: 30_000,
   })
   const products = picker?.items || []
   const productTotal = picker?.total || 0
@@ -808,10 +820,21 @@ function RailsTab({
                 ))}
               </select>
               <p className="text-xs text-ink-muted">
-                {productTotal
-                  ? `Showing ${products.length} of ${productTotal.toLocaleString('en-IN')} — ${rail.product_ids.length} pinned`
-                  : `${rail.product_ids.length} product(s) pinned`}
+                {pickerError
+                  ? 'Could not load products — retry below'
+                  : productTotal
+                    ? `Showing ${products.length} of ${productTotal.toLocaleString('en-IN')} — ${rail.product_ids.length} pinned`
+                    : `${rail.product_ids.length} product(s) pinned`}
               </p>
+              {pickerError && (
+                <button
+                  type="button"
+                  className="text-xs text-brand underline"
+                  onClick={() => void refetchPicker()}
+                >
+                  Retry loading products
+                </button>
+              )}
             </div>
           )}
           {rail.source_mode === 'auto' && (
@@ -827,8 +850,9 @@ function RailsTab({
 
 function useHandleScopedBrands(token: string | null, handle: string) {
   const { data: allBrands = [] } = useQuery({
-    queryKey: ['admin-brands-curated'],
-    queryFn: () => api<BrandItem[]>('/api/v1/admin/brands?curated=true', { token }),
+    queryKey: ['admin-brands-curated', Boolean(token)],
+    queryFn: () => api<BrandItem[]>('/api/v1/admin/brands?curated=true', token ? { token } : {}),
+    retry: 2,
   })
   const allowedSlugs = HANDLE_BRAND_SLUGS[handle] ?? []
   const brands = useMemo(() => {
