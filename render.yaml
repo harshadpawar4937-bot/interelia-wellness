@@ -1,7 +1,6 @@
 # Interelia Wellness — Render Blueprint
-# Deploy: Dashboard → + New → Blueprint → connect this GitHub repo
-# Docs: https://render.com/docs/infrastructure-as-code
-# Guide: docs/render-deploy.md
+# One-click: https://dashboard.render.com/blueprint/new?repo=https://github.com/harshadpawar4937-bot/interelia-wellness
+# Docs: https://render.com/docs/infrastructure-as-code · docs/render-deploy.md
 
 services:
   # ─── FastAPI backend ───────────────────────────────────────────
@@ -10,6 +9,7 @@ services:
     runtime: docker
     plan: free
     region: oregon
+    branch: main
     rootDir: backend
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
@@ -30,10 +30,10 @@ services:
       - key: UPLOAD_DIR
         value: /app/uploads
       - key: CORS_ORIGINS
-        # Update after first deploy if you call the API from browsers directly.
-        # Same-origin /api proxy from storefront+admin usually does not need CORS.
+        # Optional. Leave blank on first apply; set later to store+admin public URLs if needed.
         sync: false
       - key: OPENAI_API_KEY
+        # Optional — Groq/OpenAI for AI assistant
         sync: false
       - key: OPENAI_BASE_URL
         value: https://api.groq.com/openai/v1
@@ -46,6 +46,7 @@ services:
     runtime: docker
     plan: free
     region: oregon
+    branch: main
     rootDir: frontend
     dockerfilePath: ./Dockerfile
     healthCheckPath: /
@@ -63,6 +64,7 @@ services:
     runtime: docker
     plan: free
     region: oregon
+    branch: main
     rootDir: admin
     dockerfilePath: ./Dockerfile
     healthCheckPath: /

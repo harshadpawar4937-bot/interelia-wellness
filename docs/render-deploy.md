@@ -1,128 +1,125 @@
-# Deploy Interelia Wellness on Render
+# Deploy Interelia Wellness on Render — full workflow
 
-You are logged into [Render](https://dashboard.render.com). This project ships a **Blueprint** (`render.yaml`) that creates:
+## Architecture
 
-| Service | Name | What it is |
-|---------|------|------------|
-| PostgreSQL | `interelia-db` | Database |
-| Web (Docker) | `interelia-api` | FastAPI backend |
-| Web (Docker) | `interelia-store` | Customer website |
-| Web (Docker) | `interelia-admin` | Admin panel |
+```
+GitHub (main) ──push──► CI (GitHub Actions)
+                     └──auto──► Render Blueprint services
+                                      │
+                    ┌─────────────────┼─────────────────┐
+                    ▼                 ▼                 ▼
+              interelia-store   interelia-api    interelia-admin
+              (website)         (FastAPI)        (admin)
+                                      │
+                                      ▼
+                               interelia-db (Postgres)
+```
 
-Storefront and admin call the API over Render’s **private network** (`API_HOSTPORT` → nginx `/api` proxy), so you do not need to hard-code public API URLs at build time.
+- **Store + Admin** proxy `/api` to the API over Render private networking (`API_HOSTPORT`)
+- **API** uses managed Postgres via `DATABASE_URL`
+- **CI** runs pytest + TypeScript checks on every push/PR
 
-Official Blueprint docs: [Render Blueprints](https://render.com/docs/infrastructure-as-code) · [Blueprint spec](https://render.com/docs/blueprint-spec)
+Repo: https://github.com/harshadpawar4937-bot/interelia-wellness  
+Blueprint: [`render.yaml`](../render.yaml)  
+Render docs: [Blueprints](https://render.com/docs/infrastructure-as-code)
 
 ---
 
-## 0. Push this repo to GitHub (required)
+## Step 1 — One-click Blueprint deploy
 
-Render deploys from Git. This folder is not a git remote yet — create one:
+**Open this link** (while logged into Render):
+
+👉 [Create Blueprint from interelia-wellness](https://dashboard.render.com/blueprint/new?repo=https://github.com/harshadpawar4937-bot/interelia-wellness)
+
+Or manually:
+
+1. Go to [https://dashboard.render.com/](https://dashboard.render.com/)
+2. **+ New** → **Blueprint**
+3. Connect GitHub if asked → select **`harshadpawar4937-bot/interelia-wellness`**
+4. Confirm branch **`main`** and file **`render.yaml`**
+5. For prompts:
+   - `CORS_ORIGINS` → leave empty (Enter / skip)
+   - `OPENAI_API_KEY` → paste Groq key or leave empty
+6. Click **Apply**
+
+Render creates **4 resources** and starts building (≈10–20 min on free tier).
+
+---
+
+## Step 2 — Watch deploys
+
+In the dashboard you should see:
+
+| Resource | Type | Healthy when |
+|----------|------|----------------|
+| `interelia-db` | Postgres | Available |
+| `interelia-api` | Web | `/health` returns ok |
+| `interelia-store` | Web | Homepage loads |
+| `interelia-admin` | Web | Login page loads |
+
+Free web services may show a cold-start delay after idle time.
+
+---
+
+## Step 3 — First login
+
+After API is live (seed runs when `AUTO_SEED_ON_EMPTY=true`):
+
+- Admin: `https://interelia-admin-….onrender.com`
+- Email: `admin@interelia.com`
+- Password: `Admin@123` → **change immediately**
+
+Storefront: `https://interelia-store-….onrender.com`
+
+---
+
+## Step 4 — Ongoing workflow (day-to-day)
 
 ```bash
-cd "/Users/harshh/Desktop/interelia pharmacy"
-git init
+# Local changes
 git add .
-git commit -m "Prepare Interelia Wellness for Render Blueprint deploy"
-# Create an empty GitHub repo, then:
-git branch -M main
-git remote add origin https://github.com/YOUR_USER/interelia-wellness.git
-git push -u origin main
+git commit -m "Your change"
+git push origin main
 ```
 
-In Render → **Account settings → Connections**, connect GitHub and grant access to that repo.
+What happens automatically:
+
+1. **GitHub Actions CI** runs (`backend` tests + frontend/admin typecheck)
+2. **Render autoDeploy** rebuilds services that changed (`rootDir` filter)
+
+Optional gated deploys: add Deploy Hooks from each service → Settings → Deploy Hook, then set GitHub secrets:
+
+- `RENDER_DEPLOY_HOOK_API`
+- `RENDER_DEPLOY_HOOK_STORE`
+- `RENDER_DEPLOY_HOOK_ADMIN`
 
 ---
 
-## 1. Deploy with Blueprint (one click stack)
+## Step 5 — Production hardening (when ready)
 
-1. Open [Render Dashboard](https://dashboard.render.com)
-2. Click **+ New** (top right) → **Blueprint**
-3. Select your **GitHub** repo (`interelia-wellness` or whatever you named it)
-4. Render detects root `render.yaml`
-5. Blueprint name: e.g. `Interelia Wellness`
-6. For variables marked **sync: false**, fill when prompted:
-   - `CORS_ORIGINS` — leave blank for now, or set later
-   - `OPENAI_API_KEY` — optional (Groq/OpenAI for AI chat)
-7. Click **Apply**
-
-Render will create Postgres + three web services and start building. First deploy can take **10–20 minutes**.
+1. Set `AUTO_SEED_ON_EMPTY=false` on `interelia-api`
+2. Upgrade plans off **free** for always-on + persistent uploads
+3. Attach a **disk** on API at `/app/uploads` (paid)
+4. Add custom domains on each service
+5. Set `CORS_ORIGINS` to your public store + admin HTTPS URLs if needed
 
 ---
 
-## 2. After deploy — copy your URLs
+## Troubleshooting
 
-In the Blueprint / project:
-
-| Service | Open |
-|---------|------|
-| `interelia-store` | Customer site (public `.onrender.com` URL) |
-| `interelia-admin` | Admin panel |
-| `interelia-api` | API — check `/health` |
-
-**Admin login (after seed):**  
-`admin@interelia.com` / `Admin@123`  
-Change this password immediately.
+| Issue | Fix |
+|-------|-----|
+| Blueprint can’t see repo | GitHub → Render app permissions; reconnect in Render Account → Connections |
+| API crash on SECRET_KEY | Blueprint `generateValue: true` should set it; check Environment |
+| API crash on SQLite | Ensure `DATABASE_URL` is linked from `interelia-db` |
+| Store 502 on /api | Wait for API healthy; check `API_HOSTPORT` on store/admin |
+| Empty catalog | Shell on API: `PYTHONPATH=/app python scripts/seed_interelia.py` |
 
 ---
 
-## 3. Optional: AI + CORS
+## Smoke checklist
 
-On **interelia-api** → Environment:
-
-| Key | Value |
-|-----|--------|
-| `OPENAI_API_KEY` | your Groq/OpenAI key |
-| `CORS_ORIGINS` | `https://interelia-store-xxxx.onrender.com,https://interelia-admin-xxxx.onrender.com` |
-
-Redeploy API if you set these.
-
-Then set `AUTO_SEED_ON_EMPTY=false` so later deploys skip the seed script (seed is mostly idempotent either way).
-
----
-
-## 4. Smoke test
-
-- [ ] `https://interelia-api-….onrender.com/health` → `"status":"ok"`, `"database":"up"`
-- [ ] Storefront home loads
-- [ ] `/experts` shows Call / Directions
-- [ ] Admin login works
-- [ ] Place a COD test order with PIN `382481` (Gota)
-
----
-
-## 5. Free-plan notes
-
-- Free web services **spin down** after idle time (cold start ~30–60s)
-- Free Postgres may expire / sleep per Render’s free-tier policy — upgrade for production
-- **Persistent disks** (Rx uploads surviving redeploys) need a **paid** web plan — attach a disk on `interelia-api` at `/app/uploads` when you upgrade
-
-To attach a disk later (paid): service → Disks → mount `/app/uploads`.
-
----
-
-## 6. Custom domains
-
-Each service → **Settings → Custom Domains** → add `wellness.interelia.com`, `admin.…`, `api.…` as needed. Update `CORS_ORIGINS` if browsers call the API origin directly.
-
----
-
-## Manual alternative (no Blueprint)
-
-If you prefer clicking through:
-
-1. **+ New → PostgreSQL** → name `interelia-db`
-2. **+ New → Web Service** → repo, root `backend`, Docker, link `DATABASE_URL`
-3. **+ New → Web Service** → root `frontend`, set `API_HOSTPORT` from API private host:port
-4. **+ New → Web Service** → root `admin`, same `API_HOSTPORT`
-
-Blueprint is faster and keeps infra in git.
-
----
-
-## Local Docker (unchanged)
-
-```bash
-cp .env.example .env
-docker compose up --build -d
-```
+- [ ] API `/health` → `status: ok`, `database: up`
+- [ ] Store home + `/shop` + `/experts`
+- [ ] Admin login
+- [ ] Test COD order with PIN `382481`

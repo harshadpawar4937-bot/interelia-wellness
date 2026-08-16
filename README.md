@@ -16,13 +16,17 @@ Brand: [interelia.com](https://interelia.com) · accent `#E52B40`
 
 ## Production (Render) — recommended for your account
 
-You are on [Render](https://dashboard.render.com). Use the Blueprint:
+You are on [Render](https://dashboard.render.com). Full workflow:
 
-**Full guide:** [docs/render-deploy.md](docs/render-deploy.md)
+**Guide:** [docs/render-deploy.md](docs/render-deploy.md)
 
-1. Push this project to GitHub  
-2. Dashboard → **+ New** → **Blueprint** → select the repo (`render.yaml`)  
-3. Apply → gets **Postgres + API + Storefront + Admin**
+**One-click Blueprint:**  
+https://dashboard.render.com/blueprint/new?repo=https://github.com/harshadpawar4937-bot/interelia-wellness
+
+Repo: https://github.com/harshadpawar4937-bot/interelia-wellness
+
+1. Open the Blueprint link → **Apply** (creates DB + API + store + admin)  
+2. Push to `main` → GitHub Actions CI runs → Render auto-deploys  
 
 ## Production (Docker Compose)
 
