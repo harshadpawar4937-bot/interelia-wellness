@@ -35,6 +35,7 @@ import {
 } from '@/data/catalog'
 import { ProductCard } from '@/components/product/ProductCard'
 import { PromoBannerCarousel } from '@/components/home/PromoBannerCarousel'
+import { HeroTrustCarousel } from '@/components/home/HeroTrustCarousel'
 import { OfferBannerStrip } from '@/components/home/OfferBannerStrip'
 import { MerchProductRail } from '@/components/home/MerchProductRail'
 import { AsSeenOnSection } from '@/components/home/AsSeenOnSection'
@@ -118,38 +119,39 @@ export function HomePage() {
 
   return (
     <>
-      {/* Hero — brand-first, single composition */}
+      {/* Hero — balanced copy + trust media */}
       <section className="gradient-hero relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23e52b40' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }} />
-        <div className="container-brand relative grid items-center gap-10 py-14 lg:grid-cols-2 lg:py-20 xl:py-24">
+        <div className="container-brand relative grid items-center gap-8 py-10 lg:grid-cols-2 lg:gap-10 lg:py-12 xl:gap-14 xl:py-14">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.55 }}
+            className="flex flex-col justify-center lg:min-h-[420px] xl:min-h-[440px]"
           >
-            <p className="mb-3 font-display text-sm font-semibold uppercase tracking-[0.2em] text-brand">
+            <p className="mb-2.5 font-display text-xs font-semibold uppercase tracking-[0.22em] text-brand sm:text-sm">
               Interelia Wellness
             </p>
-            <h1 className="font-display text-4xl font-bold leading-[1.1] tracking-tight text-ink sm:text-5xl lg:text-[3.5rem]">
+            <h1 className="font-display text-[2rem] font-bold leading-[1.12] tracking-tight text-ink sm:text-4xl lg:text-[2.75rem] xl:text-[3rem]">
               Trusted care.
               <br />
               <span className="text-brand">Intelligent wellness.</span>
             </h1>
-            <p className="mt-5 max-w-lg text-base text-ink-muted sm:text-lg">
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-muted sm:text-base">
               India&apos;s healthcare commerce division of Interelia — authentic medicines, wellness
               essentials, prescription care, and AI guidance in one trusted platform.
             </p>
 
-            <form onSubmit={onSearch} className="mt-8">
-              <div className="mb-3 flex flex-wrap gap-2">
+            <form onSubmit={onSearch} className="mt-6 max-w-xl">
+              <div className="mb-2.5 flex flex-wrap gap-1.5">
                 {searchModes.map((m) => (
                   <button
                     key={m.id}
                     type="button"
                     onClick={() => setMode(m.id)}
-                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
                       mode === m.id
                         ? 'bg-brand text-white'
                         : 'bg-white text-ink-muted ring-1 ring-border hover:text-ink'
@@ -159,72 +161,39 @@ export function HomePage() {
                   </button>
                 ))}
               </div>
-              <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
                 <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted" size={20} />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted" size={18} />
                   <input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Search medicines, products, symptoms…"
-                    className="w-full rounded-lg border border-border bg-white py-3.5 pl-12 pr-4 text-base shadow-soft outline-none focus:border-brand"
+                    className="w-full rounded-lg border border-border bg-white py-3 pl-11 pr-3 text-sm shadow-soft outline-none focus:border-brand sm:text-base"
                   />
                 </div>
-                <Button type="submit" size="lg" className="sm:px-8">
+                <Button type="submit" size="lg" className="sm:min-w-[7.5rem] sm:px-6">
                   Search
                 </Button>
               </div>
             </form>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Button variant="outline" onClick={() => navigate('/prescription')}>
-                <Upload size={18} /> Upload Prescription
+            <div className="mt-5 flex flex-wrap items-center gap-2.5">
+              <Button variant="outline" size="sm" onClick={() => navigate('/prescription')}>
+                <Upload size={16} /> Upload Prescription
               </Button>
-              <Button variant="ghost" onClick={() => navigate('/ai-assistant')}>
-                <Bot size={18} /> Ask AI Assistant
+              <Button variant="ghost" size="sm" onClick={() => navigate('/ai-assistant')}>
+                <Bot size={16} /> Ask AI Assistant
               </Button>
             </div>
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.7, delay: 0.15 }}
-            className="relative hidden lg:block"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.08 }}
+            className="relative order-last w-full lg:order-none lg:h-[420px] xl:h-[440px]"
           >
-            <div className="aspect-[4/5] overflow-hidden rounded-2xl bg-brand shadow-lift">
-              <div className="flex h-full flex-col justify-between bg-gradient-to-br from-brand via-brand-dark to-[#8b1524] p-10 text-white">
-                <div>
-                  <p className="font-display text-sm font-medium uppercase tracking-widest text-white/70">
-                    Healthcare Commerce
-                  </p>
-                  <p className="mt-4 font-display text-3xl font-bold leading-tight xl:text-4xl">
-                    Feel better.
-                    <br />
-                    Live well.
-                  </p>
-                </div>
-                <div className="space-y-4">
-                  <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
-                    <p className="text-sm text-white/80">AI-powered recommendations</p>
-                    <p className="mt-1 font-display text-lg font-semibold">Personalized for your health journey</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <div className="flex-1 rounded-xl bg-white/10 p-3 text-center backdrop-blur">
-                      <p className="font-display text-2xl font-bold">10K+</p>
-                      <p className="text-xs text-white/70">Products</p>
-                    </div>
-                    <div className="flex-1 rounded-xl bg-white/10 p-3 text-center backdrop-blur">
-                      <p className="font-display text-2xl font-bold">24×7</p>
-                      <p className="text-xs text-white/70">AI Support</p>
-                    </div>
-                    <div className="flex-1 rounded-xl bg-white/10 p-3 text-center backdrop-blur">
-                      <p className="font-display text-2xl font-bold">100%</p>
-                      <p className="text-xs text-white/70">Authentic</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <HeroTrustCarousel />
           </motion.div>
         </div>
       </section>

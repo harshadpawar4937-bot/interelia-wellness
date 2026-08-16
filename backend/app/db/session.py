@@ -49,6 +49,53 @@ def init_db() -> None:
     _backfill_brand_slugs()
     _ensure_permissions()
     _ensure_default_experts()
+    _ensure_default_hero_banners()
+
+
+def _ensure_default_hero_banners() -> None:
+    """Seed homepage hero trust slides; refresh stock Unsplash URLs to local trust photos."""
+    from app.data.hero_banners_seed import DEFAULT_HERO_BANNERS
+    from app.models import AdBanner
+
+    db = SessionLocal()
+    try:
+        rows = db.query(AdBanner).filter(AdBanner.placement == "home_hero").all()
+        if not rows:
+            for row in DEFAULT_HERO_BANNERS:
+                db.add(AdBanner(**row))
+            db.commit()
+            return
+
+        by_title = {b["title"]: b for b in DEFAULT_HERO_BANNERS}
+        changed = False
+        for row in rows:
+            seed = by_title.get(row.title)
+            # Also migrate previous third-slide title
+            if seed is None and row.title == "Feel better. Live well.":
+                seed = by_title.get("Medicine you can trust")
+                if seed:
+                    row.title = seed["title"]
+                    row.alt_text = seed["alt_text"]
+                    row.badge_text = seed["badge_text"]
+                    row.cta_label = seed["cta_label"]
+                    row.link_url = seed["link_url"]
+                    changed = True
+            if not seed:
+                continue
+            url = row.image_url or ""
+            if (
+                "images.unsplash.com" in url
+                or url.startswith("/images/hero/")
+                or not url
+            ):
+                if row.image_url != seed["image_url"]:
+                    row.image_url = seed["image_url"]
+                    row.alt_text = seed.get("alt_text") or row.alt_text
+                    changed = True
+        if changed:
+            db.commit()
+    finally:
+        db.close()
 
 
 def _ensure_default_experts() -> None:

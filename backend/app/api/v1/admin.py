@@ -1270,8 +1270,8 @@ def _banner_to_out(b: AdBanner) -> AdBannerOut:
 
 def _validate_banner_body(db: Session, data: dict) -> None:
     kind = data.get("banner_kind")
-    if kind is not None and kind not in ("promo", "offer"):
-        raise HTTPException(400, "banner_kind must be promo or offer")
+    if kind is not None and kind not in ("promo", "offer", "hero"):
+        raise HTTPException(400, "banner_kind must be promo, offer, or hero")
     target = data.get("target_type")
     if target is not None and target not in ("product", "category", "url"):
         raise HTTPException(400, "target_type must be product, category, or url")
@@ -1342,6 +1342,8 @@ def admin_create_banner(
         raise HTTPException(400, "product_id required when target_type=product")
     if data.get("placement") == "home_offer":
         data["banner_kind"] = data.get("banner_kind") or "offer"
+    elif data.get("placement") == "home_hero":
+        data["banner_kind"] = data.get("banner_kind") or "hero"
     row = AdBanner(**data)
     db.add(row)
     db.flush()

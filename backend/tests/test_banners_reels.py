@@ -222,3 +222,40 @@ def test_instagram_sync_dedupe():
 def test_public_media_rejects_non_public_paths(client: TestClient):
     res = client.get("/api/v1/media/rx/1/secret.pdf")
     assert res.status_code == 404
+
+
+def test_hero_banners_seeded_and_admin_crud(client: TestClient, admin_token: str):
+    seeded = client.get("/api/v1/content/banners?placement=home_hero")
+    assert seeded.status_code == 200
+    assert len(seeded.json()) >= 1
+    assert all(b["banner_kind"] == "hero" for b in seeded.json())
+
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    create = client.post(
+        "/api/v1/admin/content/banners",
+        headers=headers,
+        json={
+            "title": "Family wellness",
+            "image_url": "https://placehold.co/800x1000/E52B40/fff?text=Family",
+            "link_url": "/shop",
+            "cta_label": "Shop",
+            "placement": "home_hero",
+            "banner_kind": "hero",
+            "target_type": "url",
+            "sort_order": 10,
+            "is_active": True,
+        },
+    )
+    assert create.status_code == 200, create.text
+    assert create.json()["banner_kind"] == "hero"
+
+    public = client.get("/api/v1/content/banners?placement=home_hero")
+    titles = [b["title"] for b in public.json()]
+    assert "Family wellness" in titles
+
+
+def test_hero_seed_uses_local_trust_photos(client: TestClient):
+    public = client.get("/api/v1/content/banners?placement=home_hero")
+    assert public.status_code == 200
+    urls = [b["image_url"] for b in public.json()]
+    assert any("/images/hero/" in u for u in urls)

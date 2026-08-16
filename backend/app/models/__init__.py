@@ -377,7 +377,7 @@ class AdBanner(Base, TimestampMixin):
     link_url: Mapped[str] = mapped_column(String(1000), default="/shop")
     cta_label: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     placement: Mapped[str] = mapped_column(String(64), default="home_promo", index=True)
-    banner_kind: Mapped[str] = mapped_column(String(32), default="promo")  # promo|offer
+    banner_kind: Mapped[str] = mapped_column(String(32), default="promo")  # promo|offer|hero
     target_type: Mapped[str] = mapped_column(String(32), default="url")  # product|category|url|brand
     product_id: Mapped[Optional[int]] = mapped_column(ForeignKey("products.id"), nullable=True)
     category_slug: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)

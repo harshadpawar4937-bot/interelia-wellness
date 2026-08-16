@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api, mediaSrc, uploadAuthed } from '@/lib/api'
 import { useAuth } from '@/store/auth'
 
-type Tab = 'blogs' | 'promo' | 'offers' | 'rails' | 'reels' | 'instagram'
+type Tab = 'hero' | 'blogs' | 'promo' | 'offers' | 'rails' | 'reels' | 'instagram'
 
 interface Blog {
   id: number
@@ -270,9 +270,10 @@ function ProductSelect({
 export function ContentPage() {
   const token = useAuth((s) => s.token)
   const qc = useQueryClient()
-  const [tab, setTab] = useState<Tab>('promo')
+  const [tab, setTab] = useState<Tab>('hero')
 
   const tabs: { id: Tab; label: string }[] = [
+    { id: 'hero', label: 'Hero images' },
     { id: 'promo', label: 'Promo banners' },
     { id: 'offers', label: 'Offer banners' },
     { id: 'rails', label: 'Latest / Trending' },
@@ -285,7 +286,7 @@ export function ContentPage() {
     <div>
       <h1 className="admin-page-title">Content CMS</h1>
       <p className="admin-page-sub">
-        Manage homepage banners, product rails, Instagram reels, and blogs.
+        Manage homepage hero images, banners, product rails, Instagram reels, and blogs.
       </p>
       <div className="admin-tab-scroll mt-4 border-b border-border pb-2">
         {tabs.map((t) => (
@@ -305,6 +306,7 @@ export function ContentPage() {
       </div>
       <div className="mt-6">
         {tab === 'blogs' && <BlogsTab token={token} />}
+        {tab === 'hero' && <BannersTab token={token} qc={qc} placement="home_hero" kindDefault="hero" />}
         {tab === 'promo' && <BannersTab token={token} qc={qc} placement="home_promo" kindDefault="promo" />}
         {tab === 'offers' && <BannersTab token={token} qc={qc} placement="home_offer" kindDefault="offer" />}
         {tab === 'rails' && <RailsTab token={token} qc={qc} />}
@@ -401,8 +403,8 @@ function BannersTab({
 }: {
   token: string | null
   qc: ReturnType<typeof useQueryClient>
-  placement: 'home_promo' | 'home_offer'
-  kindDefault: 'promo' | 'offer'
+  placement: 'home_promo' | 'home_offer' | 'home_hero'
+  kindDefault: 'promo' | 'offer' | 'hero'
 }) {
   const [brandSlug, setBrandSlug] = useState('')
   const { data: brands = [] } = useQuery({
@@ -418,11 +420,11 @@ function BannersTab({
     title: '',
     alt_text: '',
     image_url: '',
-    link_url: '/shop',
-    cta_label: 'Shop Now',
-    badge_text: kindDefault === 'offer' ? 'Offer' : '',
+    link_url: kindDefault === 'hero' ? '/shop' : '/shop',
+    cta_label: kindDefault === 'hero' ? 'Learn more' : 'Shop Now',
+    badge_text: kindDefault === 'offer' ? 'Offer' : kindDefault === 'hero' ? 'Trust' : '',
     banner_kind: kindDefault,
-    target_type: 'product' as 'product' | 'category' | 'url',
+    target_type: (kindDefault === 'hero' ? 'url' : 'product') as 'product' | 'category' | 'url',
     product_id: '' as string | number,
     category_slug: '',
     sort_order: 0,
@@ -512,8 +514,16 @@ function BannersTab({
         }}
       >
         <h2 className="font-display text-lg font-semibold">
-          New {kindDefault === 'offer' ? 'offer' : 'promo'} banner
+          New{' '}
+          {kindDefault === 'offer' ? 'offer' : kindDefault === 'hero' ? 'hero' : 'promo'}{' '}
+          {kindDefault === 'hero' ? 'image' : 'banner'}
         </h2>
+        {kindDefault === 'hero' && (
+          <p className="mb-2 text-xs text-ink-muted">
+            These images rotate every 2 seconds in the homepage hero panel. Prefer doctor / family /
+            care photos (portrait ~4:5).
+          </p>
+        )}
         <input
           className="w-full rounded border border-border px-3 py-2 text-sm"
           placeholder="Title"
