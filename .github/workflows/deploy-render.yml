@@ -1,0 +1,30 @@
+# Optional manual redeploy via Render Deploy Hooks.
+# Blueprint autoDeploy already deploys on every push to main.
+# Secrets (optional): RENDER_DEPLOY_HOOK_API, RENDER_DEPLOY_HOOK_STORE, RENDER_DEPLOY_HOOK_ADMIN
+name: Deploy Render
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger API deploy hook
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "Skip API — secret not set"; exit 0; fi
+          curl -fsS -X POST "$HOOK"
+      - name: Trigger storefront deploy hook
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_STORE }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "Skip store — secret not set"; exit 0; fi
+          curl -fsS -X POST "$HOOK"
+      - name: Trigger admin deploy hook
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_ADMIN }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "Skip admin — secret not set"; exit 0; fi
+          curl -fsS -X POST "$HOOK"
