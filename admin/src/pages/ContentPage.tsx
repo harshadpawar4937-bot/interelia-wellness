@@ -931,6 +931,10 @@ function ReelsTab({
           setError('Please choose an MP4 or WEBM video file')
           return
         }
+        if (file.size > 40 * 1024 * 1024) {
+          setError('Video must be 40MB or smaller')
+          return
+        }
       }
       const fd = new FormData()
       fd.append('file', file)
@@ -1062,7 +1066,12 @@ function ReelsTab({
               )}
             </label>
           )}
-          {uploading && <p className="text-xs text-brand">Uploading…</p>}
+          {uploading && (
+            <p className="text-xs text-brand">Uploading… keep this tab open (large videos can take a minute)</p>
+          )}
+          {form.video_url && form.display_mode === 'local_video' && (
+            <p className="text-xs text-emerald-700">Video ready — you can Save reel</p>
+          )}
         </div>
 
         <label className="flex items-center gap-2 text-sm">

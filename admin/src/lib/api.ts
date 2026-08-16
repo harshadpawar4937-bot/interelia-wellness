@@ -153,6 +153,9 @@ export async function uploadAuthed<T>(path: string, formData: FormData, token?: 
   }
   const body = await res.json().catch(() => ({}))
   if (!res.ok) {
+    if (res.status === 413) {
+      throw new Error('File too large for upload (max ~40MB)')
+    }
     throw new Error(errorMessage((body as { detail?: unknown }).detail, 'Upload failed'))
   }
   return body as T
