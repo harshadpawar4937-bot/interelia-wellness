@@ -1,4 +1,5 @@
-# CI — runs on every push/PR to main. Render auto-deploys separately via Blueprint.
+# Quality gate for Render autoDeployTrigger: checksPass
+# Render deploys main only after these checks succeed.
 name: CI
 
 on:
@@ -6,6 +7,10 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend-tests:
@@ -31,8 +36,7 @@ jobs:
           ENVIRONMENT: development
           SECRET_KEY: ci-test-secret-key-at-least-32-characters-long
           DATABASE_URL: sqlite:///./ci_test.db
-        run: |
-          PYTHONPATH=. pytest tests/ -q --tb=line
+        run: PYTHONPATH=. pytest tests/ -q --tb=line
 
   frontend-typecheck:
     name: Frontend typecheck
@@ -65,3 +69,29 @@ jobs:
           cache-dependency-path: admin/package-lock.json
       - run: npm ci
       - run: npx tsc --noEmit
+
+  docker-build:
+    name: Docker build (API / store / admin)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            context: backend
+          - name: store
+            context: frontend
+          - name: admin
+            context: admin
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ${{ matrix.name }} image
+        run: docker build -t interelia-${{ matrix.name }}:ci ./${{ matrix.context }}
+
+  ci-gate:
+    name: CI gate
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-typecheck, admin-typecheck, docker-build]
+    steps:
+      - name: All checks passed
+        run: echo "CI green — Render may auto-deploy (checksPass)"

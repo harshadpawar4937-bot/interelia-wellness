@@ -14,19 +14,20 @@ Brand: [interelia.com](https://interelia.com) · accent `#E52B40`
 | Docker storefront | 8080 | Production nginx + API proxy |
 | Docker admin | 8081 | Production admin SPA |
 
-## Production (Render) — recommended for your account
+## Production (Render) — fully automated
 
-You are on [Render](https://dashboard.render.com). Full workflow:
+**Guide:** [docs/render-deploy.md](docs/render-deploy.md)  
+**Blueprints:** [dashboard.render.com/blueprints](https://dashboard.render.com/blueprints)
 
-**Guide:** [docs/render-deploy.md](docs/render-deploy.md)
-
-**One-click Blueprint:**  
+**One-click apply:**  
 https://dashboard.render.com/blueprint/new?repo=https://github.com/harshadpawar4937-bot/interelia-wellness
 
 Repo: https://github.com/harshadpawar4937-bot/interelia-wellness
 
-1. Open the Blueprint link → **Apply** (creates DB + API + store + admin)  
-2. Push to `main` → GitHub Actions CI runs → Render auto-deploys  
+1. **Once:** Blueprint → **Apply** (Postgres + API + store + admin)  
+2. **Always after:** merge to `main` → GitHub **CI** → Render deploys only when checks pass (`checksPass`) → optional smoke  
+3. No manual redeploys needed day-to-day  
+
 
 ## Production (Docker Compose)
 

@@ -1,107 +1,131 @@
-# Deploy Interelia Wellness on Render — full workflow
+# Deploy Interelia Wellness on Render — full automated workflow
 
-## Architecture
+Senior DevOps model: **IaC Blueprint + CI gate + auto-deploy + smoke**.
 
-```
-GitHub (main) ──push──► CI (GitHub Actions)
-                     └──auto──► Render Blueprint services
-                                      │
-                    ┌─────────────────┼─────────────────┐
-                    ▼                 ▼                 ▼
-              interelia-store   interelia-api    interelia-admin
-              (website)         (FastAPI)        (admin)
-                                      │
-                                      ▼
-                               interelia-db (Postgres)
-```
-
-- **Store + Admin** proxy `/api` to the API over Render private networking (`API_HOSTPORT`)
-- **API** uses managed Postgres via `DATABASE_URL`
-- **CI** runs pytest + TypeScript checks on every push/PR
+| Layer | Tool | Role |
+|-------|------|------|
+| Infra | [`render.yaml`](../render.yaml) | Postgres + API + store + admin |
+| Gate | GitHub Actions **CI** | pytest, typecheck, Docker build |
+| Deploy | Render `autoDeployTrigger: **checksPass**` | Deploys `main` only after CI is green |
+| Verify | GitHub Actions **CD Render** | Optional smoke against live URLs |
 
 Repo: https://github.com/harshadpawar4937-bot/interelia-wellness  
-Blueprint: [`render.yaml`](../render.yaml)  
-Render docs: [Blueprints](https://render.com/docs/infrastructure-as-code)
+Dashboard: [Blueprints](https://dashboard.render.com/blueprints) · [New Blueprint](https://dashboard.render.com/blueprint/new?repo=https://github.com/harshadpawar4937-bot/interelia-wellness)
+
+```
+developer ──push──► GitHub main
+                      │
+                      ├─► GitHub Actions CI (must pass)
+                      │
+                      └─► Render watches checksPass
+                                │
+              ┌─────────────────┼─────────────────┐
+              ▼                 ▼                 ▼
+        interelia-store   interelia-api    interelia-admin
+              │                 │                 │
+              └──────── /api via private hostport ┘
+                                │
+                                ▼
+                         interelia-db
+                                │
+                      (optional) CD smoke
+```
 
 ---
 
-## Step 1 — One-click Blueprint deploy
+## One-time setup (do this once)
 
-**Open this link** (while logged into Render):
+### 1. Apply the Blueprint
 
-👉 [Create Blueprint from interelia-wellness](https://dashboard.render.com/blueprint/new?repo=https://github.com/harshadpawar4937-bot/interelia-wellness)
+1. Open: [Create Blueprint — interelia-wellness](https://dashboard.render.com/blueprint/new?repo=https://github.com/harshadpawar4937-bot/interelia-wellness)
+2. Or: [dashboard.render.com/blueprints](https://dashboard.render.com/blueprints) → **New Blueprint Instance** → connect GitHub → select **`harshadpawar4937-bot/interelia-wellness`**
+3. Confirm branch **`main`**, file **`render.yaml`**
+4. Env prompts:
+   - `CORS_ORIGINS` → skip / leave empty
+   - `OPENAI_API_KEY` → optional (Groq/OpenAI)
+5. Click **Apply**
 
-Or manually:
+Render creates **4 resources** and starts the first build (~10–20 min on free).
 
-1. Go to [https://dashboard.render.com/](https://dashboard.render.com/)
-2. **+ New** → **Blueprint**
-3. Connect GitHub if asked → select **`harshadpawar4937-bot/interelia-wellness`**
-4. Confirm branch **`main`** and file **`render.yaml`**
-5. For prompts:
-   - `CORS_ORIGINS` → leave empty (Enter / skip)
-   - `OPENAI_API_KEY` → paste Groq key or leave empty
-6. Click **Apply**
+### 2. Confirm services are live
 
-Render creates **4 resources** and starts building (≈10–20 min on free tier).
+| Resource | Healthy when |
+|----------|----------------|
+| `interelia-db` | Available |
+| `interelia-api` | `GET /health` → ok |
+| `interelia-store` | Homepage loads |
+| `interelia-admin` | Login page loads |
 
----
+Admin seed (while `AUTO_SEED_ON_EMPTY=true`):
 
-## Step 2 — Watch deploys
-
-In the dashboard you should see:
-
-| Resource | Type | Healthy when |
-|----------|------|----------------|
-| `interelia-db` | Postgres | Available |
-| `interelia-api` | Web | `/health` returns ok |
-| `interelia-store` | Web | Homepage loads |
-| `interelia-admin` | Web | Login page loads |
-
-Free web services may show a cold-start delay after idle time.
-
----
-
-## Step 3 — First login
-
-After API is live (seed runs when `AUTO_SEED_ON_EMPTY=true`):
-
-- Admin: `https://interelia-admin-….onrender.com`
 - Email: `admin@interelia.com`
 - Password: `Admin@123` → **change immediately**
 
-Storefront: `https://interelia-store-….onrender.com`
+### 3. Wire GitHub → smoke (optional but recommended)
 
----
+In the GitHub repo → **Settings → Secrets and variables → Actions → Variables**:
 
-## Step 4 — Ongoing workflow (day-to-day)
+| Variable | Example |
+|----------|---------|
+| `RENDER_API_URL` | `https://interelia-api-xxxx.onrender.com` |
+| `RENDER_STORE_URL` | `https://interelia-store-xxxx.onrender.com` |
+| `RENDER_ADMIN_URL` | `https://interelia-admin-xxxx.onrender.com` |
 
-```bash
-# Local changes
-git add .
-git commit -m "Your change"
-git push origin main
-```
+After that, every green CI on `main` triggers **CD Render** smoke (~90s delay for rollouts).
 
-What happens automatically:
+### 4. (Optional) Force redeploy hooks
 
-1. **GitHub Actions CI** runs (`backend` tests + frontend/admin typecheck)
-2. **Render autoDeploy** rebuilds services that changed (`rootDir` filter)
-
-Optional gated deploys: add Deploy Hooks from each service → Settings → Deploy Hook, then set GitHub secrets:
+Per service on Render → **Settings → Deploy Hook** → copy URL → GitHub **Secrets**:
 
 - `RENDER_DEPLOY_HOOK_API`
 - `RENDER_DEPLOY_HOOK_STORE`
 - `RENDER_DEPLOY_HOOK_ADMIN`
 
+Then: Actions → **CD Render** → Run workflow → enable **force_hooks**.
+
 ---
 
-## Step 5 — Production hardening (when ready)
+## Day-to-day (fully automated)
 
-1. Set `AUTO_SEED_ON_EMPTY=false` on `interelia-api`
-2. Upgrade plans off **free** for always-on + persistent uploads
-3. Attach a **disk** on API at `/app/uploads` (paid)
-4. Add custom domains on each service
-5. Set `CORS_ORIGINS` to your public store + admin HTTPS URLs if needed
+```bash
+git checkout -b feat/my-change
+# …edit…
+git add . && git commit -m "Describe why"
+git push -u origin HEAD
+# open PR → CI must be green → merge to main
+```
+
+After merge to **`main`**:
+
+1. **CI** runs (tests + Docker builds)
+2. Render sees **checksPass** → deploys only services whose `buildFilter` paths changed
+3. **CD** smoke runs if URLs are set
+
+No dashboard clicks required after the one-time Blueprint apply.
+
+---
+
+## What automates what
+
+| Event | Automated action |
+|-------|------------------|
+| Push/PR to `main` | CI jobs |
+| CI green on `main` | Render deploys filtered services |
+| Docs-only commit | No service rebuild (`ignoredPaths`) |
+| Backend-only change | Only `interelia-api` (filter) |
+| CI red | **No** Render deploy |
+| Manual “Deploy” in Render | Always allowed |
+| `workflow_dispatch` + hooks | Force redeploy all three webs |
+
+---
+
+## Production hardening
+
+1. Set `AUTO_SEED_ON_EMPTY=false` on `interelia-api` after first seed
+2. Set `CORS_ORIGINS` to store + admin HTTPS origins if browsers need it
+3. Paid plan + disk on `/app/uploads` for persistent media
+4. Custom domains on each web service
+5. Protect `main` in GitHub (require CI status checks)
 
 ---
 
@@ -109,17 +133,27 @@ Optional gated deploys: add Deploy Hooks from each service → Settings → Depl
 
 | Issue | Fix |
 |-------|-----|
-| Blueprint can’t see repo | GitHub → Render app permissions; reconnect in Render Account → Connections |
-| API crash on SECRET_KEY | Blueprint `generateValue: true` should set it; check Environment |
-| API crash on SQLite | Ensure `DATABASE_URL` is linked from `interelia-db` |
-| Store 502 on /api | Wait for API healthy; check `API_HOSTPORT` on store/admin |
-| Empty catalog | Shell on API: `PYTHONPATH=/app python scripts/seed_interelia.py` |
+| Blueprint can’t see repo | Reconnect GitHub under Render → Account → [Connections](https://dashboard.render.com/u/settings#integrations) |
+| Stuck “waiting for checks” | Open GitHub Actions; fix failing CI; ensure workflows exist on `main` |
+| Store `/api` 502 | Wait for API healthy; confirm `API_HOSTPORT` from `interelia-api` |
+| Empty catalog | API shell: `PYTHONPATH=/app python scripts/seed_interelia.py` |
+| Smoke skipped | Set `RENDER_*_URL` repo Variables |
+
+Local smoke:
+
+```bash
+export RENDER_API_URL=https://….onrender.com
+export RENDER_STORE_URL=https://….onrender.com
+export RENDER_ADMIN_URL=https://….onrender.com
+bash scripts/smoke-render.sh
+```
 
 ---
 
-## Smoke checklist
+## Smoke checklist (first launch)
 
 - [ ] API `/health` → `status: ok`, `database: up`
 - [ ] Store home + `/shop` + `/experts`
 - [ ] Admin login
 - [ ] Test COD order with PIN `382481`
+- [ ] Push a tiny commit → CI green → Render deploy appears in dashboard

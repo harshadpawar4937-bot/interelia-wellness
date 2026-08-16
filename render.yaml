@@ -1,6 +1,10 @@
-# Interelia Wellness — Render Blueprint
-# One-click: https://dashboard.render.com/blueprint/new?repo=https://github.com/harshadpawar4937-bot/interelia-wellness
-# Docs: https://render.com/docs/infrastructure-as-code · docs/render-deploy.md
+# Interelia Wellness — Render Blueprint (IaC)
+# Apply once: https://dashboard.render.com/blueprint/new?repo=https://github.com/harshadpawar4937-bot/interelia-wellness
+# Docs: docs/render-deploy.md · https://render.com/docs/blueprint-spec
+#
+# Automation model:
+#   push/PR → GitHub Actions CI → Render auto-deploys only when checksPass
+#   monorepo buildFilter → only changed services rebuild
 
 services:
   # ─── FastAPI backend ───────────────────────────────────────────
@@ -13,7 +17,15 @@ services:
     rootDir: backend
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    autoDeploy: true
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - backend/**
+        - render.yaml
+      ignoredPaths:
+        - docs/**
+        - "**/*.md"
+        - .github/**
     envVars:
       - key: ENVIRONMENT
         value: production
@@ -30,7 +42,7 @@ services:
       - key: UPLOAD_DIR
         value: /app/uploads
       - key: CORS_ORIGINS
-        # Optional. Leave blank on first apply; set later to store+admin public URLs if needed.
+        # Optional. Leave blank on first apply; set later to store+admin public URLs.
         sync: false
       - key: OPENAI_API_KEY
         # Optional — Groq/OpenAI for AI assistant
@@ -50,7 +62,15 @@ services:
     rootDir: frontend
     dockerfilePath: ./Dockerfile
     healthCheckPath: /
-    autoDeploy: true
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - frontend/**
+        - render.yaml
+      ignoredPaths:
+        - docs/**
+        - "**/*.md"
+        - .github/**
     envVars:
       - key: API_HOSTPORT
         fromService:
@@ -68,7 +88,15 @@ services:
     rootDir: admin
     dockerfilePath: ./Dockerfile
     healthCheckPath: /
-    autoDeploy: true
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - admin/**
+        - render.yaml
+      ignoredPaths:
+        - docs/**
+        - "**/*.md"
+        - .github/**
     envVars:
       - key: API_HOSTPORT
         fromService:
